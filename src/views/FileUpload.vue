@@ -52,7 +52,8 @@ const upload = async () => {
 
   try {
     // TODO: 서버 API 연동 시 사용
-    //const formData = buildFormData(selectedFile.value)
+    const formData = buildFormData(selectedFile.value)
+    console.log(formData)
 
     // ✅ 지금은 서버가 없으니 "전송 시뮬레이션"만
     // 나중에 Java(Spring) 붙이면 여기서 fetch/axios로 POST 요청하면 됨.
