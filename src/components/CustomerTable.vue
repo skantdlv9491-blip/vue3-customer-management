@@ -1,22 +1,26 @@
 <script setup lang="ts">
-// Vue에서 props/emit 타입 안전하게 쓰기 위해 import
-import type { Customer } from '@/types/customer'
+// 타입을 import하는 이유: props 타입을 안전하게 고정하기 위해
+import type { Customer } from '../types/customer'
 
-// 부모로부터 데이터만 받기 때문에 props 사용
-// props는 단방향 데이터 흐름(부모 → 자식)을 유지하기 위해 사용
+// defineProps를 쓰는 이유: 부모에서 내려준 고객 목록을 받기 위해
 const props = defineProps<{
   customers: Customer[]
 }>()
 
-// 자식에서 이벤트를 부모로 올리기 위해 emit 사용
-// emit은 상태 변경을 부모에게 위임하기 위한 공식 패턴
+// defineEmits를 쓰는 이유: 자식에서 부모에게 삭제/수정 요청을 이벤트로 알리기 위해
 const emit = defineEmits<{
   (e: 'delete', id: number): void
+  (e: 'edit', id: number): void
 }>()
 
-// 삭제 버튼 클릭 시 부모에게 id 전달
+// 삭제 요청
 const onDelete = (id: number) => {
   emit('delete', id)
+}
+
+// 수정 요청
+const onEdit = (id: number) => {
+  emit('edit', id)
 }
 </script>
 
@@ -30,13 +34,15 @@ const onDelete = (id: number) => {
         <th>관리</th>
       </tr>
     </thead>
+
     <tbody>
       <tr v-for="c in props.customers" :key="c.id">
         <td>{{ c.name }}</td>
         <td>{{ c.email }}</td>
         <td>{{ c.phone }}</td>
-        <td>
-          <button @click="onDelete(c.id)">삭제</button>
+        <td class="actions">
+          <button class="btnEdit" type="button" @click="onEdit(c.id)">수정</button>
+          <button class="btnDelete" type="button" @click="onDelete(c.id)">삭제</button>
         </td>
       </tr>
     </tbody>
@@ -44,43 +50,79 @@ const onDelete = (id: number) => {
 </template>
 
 <style scoped>
-/* 테이블 전체 레이아웃 */
+/* 테이블 레이아웃 */
 .table {
-  /* 테이블 너비를 부모 기준 100%로 설정 */
+  /* 너비 100% */
   width: 100%;
 
-  /* 셀 경계선 병합 */
+  /* 경계선 병합 */
   border-collapse: collapse;
 }
 
-/* 테이블 헤더, 바디 공통 셀 스타일 */
+/* 헤더/셀 공통 */
 th,
 td {
-  /* 셀 내부 여백 */
+  /* 내부 여백 */
   padding: 8px;
 
-  /* 셀 테두리 */
+  /* 테두리 */
   border: 1px solid #ddd;
 
   /* 텍스트 정렬 */
   text-align: left;
 }
 
-/* 삭제 버튼 스타일 */
-button {
-  /* 클릭 가능 커서 */
+/* 버튼 영역 */
+.actions {
+  /* 버튼들을 가로로 배치 */
+  display: flex;
+
+  /* 버튼 사이 간격 */
+  gap: 8px;
+
+  /* 세로 중앙 정렬 */
+  align-items: center;
+}
+
+/* 수정 버튼 */
+.btnEdit {
+  /* 클릭 커서 */
   cursor: pointer;
+
+  /* 내부 여백 */
+  padding: 4px 8px;
+
+  /* 테두리 제거 */
+  border: none;
+
+  /* 모서리 둥글게 */
+  border-radius: 6px;
+
+  /* 배경색 */
+  background-color: #111;
+
+  /* 글자색 */
+  color: #fff;
+}
+
+/* 삭제 버튼 */
+.btnDelete {
+  /* 클릭 커서 */
+  cursor: pointer;
+
+  /* 내부 여백 */
+  padding: 4px 8px;
+
+  /* 테두리 제거 */
+  border: none;
+
+  /* 모서리 둥글게 */
+  border-radius: 6px;
 
   /* 배경색 */
   background-color: #ff4d4f;
 
   /* 글자색 */
-  color: white;
-
-  /* 테두리 제거 */
-  border: none;
-
-  /* 내부 여백 */
-  padding: 4px 8px;
+  color: #fff;
 }
 </style>

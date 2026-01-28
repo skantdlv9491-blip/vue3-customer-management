@@ -1,6 +1,7 @@
 // Vue 애플리케이션 인스턴스를 생성하는 함수
 // - createApp(App)을 호출하면 Vue 앱 객체가 만들어짐
 import { createApp } from 'vue'
+import { createPinia } from 'pinia'
 
 // 루트 컴포넌트(App.vue)
 // - 화면의 최상위(레이아웃) 컴포넌트
@@ -16,4 +17,7 @@ import router from './router'
 // - App.vue를 루트로 설정
 // - .use(router)로 라우터를 앱에 장착 (페이지 이동 가능)
 // - .mount('#app')로 index.html의 <div id="app">에 렌더링 시작
-createApp(App).use(router).mount('#app')
+createApp(App)
+  .use(createPinia()) // 🔥 이 줄이 빠져 있었음
+  .use(router)
+  .mount('#app')

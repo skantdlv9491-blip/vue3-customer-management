@@ -1,169 +1,278 @@
 <script setup lang="ts">
-// ref: 입력값/메시지 같은 상태를 반응형으로 관리
-import { ref } from 'vue'
+// ref를 import하는 이유: 입력값을 반응형으로 관리하기 위해
+import { ref, watch, computed } from 'vue'
 
-// store import
-// - useCustomerStore()로 고객 목록 추가 기능을 사용
+// useRouter를 import하는 이유: 등록/수정 후 목록으로 이동하기 위해
+import { useRouter } from 'vue-router'
+
+// store를 import하는 이유: 등록/수정/수정대상 정보를 Pinia에서 관리하기 위해
 import { useCustomerStore } from '../stores/customerStore'
 
-// 이름 입력값 상태
-const name = ref('')
+// 타입을 import하는 이유: 저장할 입력 데이터 구조를 고정하기 위해
+import type { CustomerInput } from '../types/customer'
 
-// 전화번호 입력값 상태
+// 라우터 인스턴스
+const router = useRouter()
+
+// store 인스턴스
+const customerStore = useCustomerStore()
+
+// 입력값 상태
+const name = ref('')
+const email = ref('')
 const phone = ref('')
 
-// 사용자에게 보여줄 안내 메시지
-const message = ref('')
+// 에러 메시지 상태
+const errors = ref<{
+  name?: string
+  email?: string
+  phone?: string
+}>({})
 
-// store에서 addCustomer 함수만 꺼내오기
-const { addCustomer } = useCustomerStore()
+// 수정 대상(customerStore.editingCustomer)이 바뀔 때 폼을 채우기 위해 watch 사용
+watch(
+  () => customerStore.editingCustomer,
+  (c) => {
+    if (c) {
+      name.value = c.name
+      email.value = c.email
+      phone.value = c.phone
+    } else {
+      name.value = ''
+      email.value = ''
+      phone.value = ''
+    }
+    errors.value = {}
+  },
+  { immediate: true },
+)
 
-// 등록 처리 함수
-const submitForm = () => {
-  // 필수값 검증: 이름/전화번호가 비어 있으면 중단
-  if (!name.value || !phone.value) {
-    message.value = '이름과 전화번호를 입력해주세요.'
-    return
+// 이메일 형식 체크용 정규식 (실무 최소)
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+// 전화번호 형식 검증 정규식
+// - 010-1234-5678 형태만 허용
+const phoneRegex = /^010\d{4}\d{4}$/
+
+// 유효성 검사
+const validate = (): boolean => {
+  const e: typeof errors.value = {}
+
+  if (!name.value.trim()) {
+    e.name = '이름은 필수입니다.'
   }
 
-  // 전화번호 형식 검증 정규식
-  // - 010-1234-5678 형태만 허용
-  const phoneRegex = /^010-\d{4}-\d{4}$/
+  if (!email.value.trim()) {
+    e.email = '이메일은 필수입니다.'
+  } else if (!emailRegex.test(email.value)) {
+    e.email = '이메일 형식이 올바르지 않습니다.'
+  }
+
+  if (!phone.value.trim()) {
+    e.phone = '전화번호는 필수입니다.'
+  }
 
   // 정규식 불일치면 중단
   if (!phoneRegex.test(phone.value)) {
-    message.value = '전화번호 형식은 010-1234-5678 입니다.'
-    return
+    e.phone = '전화번호 형식은 01012345678 입니다.'
   }
 
-  // store에 고객 추가 (전역 상태 갱신)
-  addCustomer(name.value, phone.value)
+  errors.value = e
+  return Object.keys(e).length === 0
+}
 
-  // 성공 메시지
-  message.value = '등록 완료!'
+// submit 가능 여부(버튼 비활성화용)
+const canSubmit = computed(() => {
+  return name.value && email.value && phone.value
+})
 
-  // 입력칸 초기화
-  name.value = ''
-  phone.value = ''
+// 제출
+const onSubmit = () => {
+  if (!validate()) return
+
+  const payload: CustomerInput = {
+    name: name.value.trim(),
+    email: email.value.trim(),
+    phone: phone.value.trim(),
+  }
+
+  if (customerStore.editingId !== null) {
+    customerStore.updateCustomer(payload)
+  } else {
+    customerStore.addCustomer(payload)
+  }
+
+  router.push('/')
+}
+
+// 취소
+const onCancel = () => {
+  customerStore.clearEdit()
+  router.push('/')
 }
 </script>
 
 <template>
-  <div class="page">
-    <h2>고객 정보 등록</h2>
+  <section class="container">
+    <h2>📝 고객 {{ customerStore.editingId !== null ? '수정' : '등록' }}</h2>
 
-    <div class="form-group">
-      <label>이름</label>
-      <!-- v-model: input 값 ↔ name 상태 자동 동기화 -->
-      <input v-model="name" type="text" placeholder="홍길동" />
-    </div>
+    <form class="form" @submit.prevent="onSubmit">
+      <div class="row">
+        <label class="label">이름</label>
+        <input class="input" v-model="name" />
+        <p v-if="errors.name" class="error">{{ errors.name }}</p>
+      </div>
 
-    <div class="form-group">
-      <label>전화번호</label>
-      <!-- v-model: input 값 ↔ phone 상태 자동 동기화 -->
-      <input v-model="phone" type="text" placeholder="010-1234-5678" />
-    </div>
+      <div class="row">
+        <label class="label">이메일</label>
+        <input class="input" v-model="email" />
+        <p v-if="errors.email" class="error">{{ errors.email }}</p>
+      </div>
 
-    <!-- 클릭 이벤트로 submitForm 실행 -->
-    <button @click="submitForm">등록하기</button>
+      <div class="row">
+        <label class="label">전화번호</label>
+        <input class="input" v-model="phone" />
+        <p v-if="errors.phone" class="error">{{ errors.phone }}</p>
+      </div>
 
-    <!-- message 상태를 화면에 표시 -->
-    <p class="message">{{ message }}</p>
-  </div>
+      <div class="actions">
+        <button class="btnPrimary" type="submit" :disabled="!canSubmit">
+          {{ customerStore.editingId !== null ? '수정 완료' : '등록' }}
+        </button>
+
+        <button class="btnGhost" type="button" @click="onCancel">취소</button>
+      </div>
+    </form>
+  </section>
 </template>
 
 <style scoped>
-/* page: 카드형 폼 컨테이너 */
-.page {
-  /* 폼 최대 폭 제한 */
-  max-width: 500px;
-
-  /* 가운데 정렬 + 상하 여백 */
-  margin: 40px auto;
-
-  /* 카드 배경 */
-  background: white;
-
+/* 페이지 컨테이너 */
+.container {
   /* 내부 여백 */
-  padding: 30px;
+  padding: 16px;
+}
+
+/* 폼 컨테이너 */
+.form {
+  /* 내부 여백 */
+  padding: 12px;
+
+  /* 테두리 */
+  border: 1px solid #ddd;
 
   /* 모서리 둥글게 */
-  border-radius: 10px;
-
-  /* 그림자: 떠 보이는 카드 느낌 */
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+  border-radius: 8px;
 }
 
-/* form-group: 라벨과 인풋 묶음 */
-.form-group {
-  /* 세로 배치 */
-  display: flex;
+/* 입력 행 */
+.row {
+  /* 아래 간격 */
+  margin-bottom: 10px;
+}
 
-  /* 자식 요소를 세로 방향으로 쌓기 */
-  flex-direction: column;
+/* 라벨 */
+.label {
+  /* 블록 처리 */
+  display: block;
+
+  /* 글자 굵기 */
+  font-weight: 600;
 
   /* 아래 여백 */
-  margin-bottom: 15px;
+  margin-bottom: 6px;
 }
 
-label {
-  /* 라벨 굵게 */
-  font-weight: bold;
+/* 입력창 */
+.input {
+  /* 너비 100% */
+  width: 100%;
 
-  /* 라벨과 input 사이 여백 */
-  margin-bottom: 5px;
-}
-
-input {
-  /* 입력창 내부 여백 */
-  padding: 10px;
+  /* 내부 여백 */
+  padding: 8px;
 
   /* 테두리 */
   border: 1px solid #ccc;
 
   /* 모서리 둥글게 */
   border-radius: 6px;
+
+  /* padding 포함 계산 */
+  box-sizing: border-box;
 }
 
-button {
-  /* 버튼 폭을 폼에 맞게 100% */
-  width: 100%;
+/* 버튼 영역 */
+.actions {
+  /* 가로 배치 */
+  display: flex;
 
-  /* 버튼 내부 여백 */
-  padding: 12px;
+  /* 버튼 간격 */
+  gap: 8px;
 
-  /* 기본 테두리 제거 */
+  /* 위 여백 */
+  margin-top: 12px;
+}
+
+/* 기본 버튼 */
+.btnPrimary {
+  /* 클릭 커서 */
+  cursor: pointer;
+
+  /* 내부 여백 */
+  padding: 8px 12px;
+
+  /* 테두리 제거 */
   border: none;
 
-  /* 버튼 배경색 */
-  background: #2ecc71;
-
-  /* 버튼 글자색 */
-  color: white;
-
-  /* 글자 크기 */
-  font-size: 16px;
-
-  /* 모서리 둥글게 */
+  /* 둥글게 */
   border-radius: 6px;
 
-  /* 마우스 올리면 클릭 가능한 커서 */
+  /* 배경색 */
+  background-color: #111;
+
+  /* 글자색 */
+  color: #fff;
+}
+
+/* 보조 버튼 */
+.btnGhost {
+  /* 클릭 커서 */
   cursor: pointer;
+
+  /* 내부 여백 */
+  padding: 8px 12px;
+
+  /* 테두리 */
+  border: 1px solid #ddd;
+
+  /* 둥글게 */
+  border-radius: 6px;
+
+  /* 배경 */
+  background-color: #fff;
+
+  /* 글자색 */
+  color: #111;
 }
 
-button:hover {
-  /* 마우스 오버 시 배경 조금 더 진하게 */
-  background: #27ae60;
-}
+/* 에러 메시지 */
+.error {
+  /* 글자색 */
+  color: #ff4d4f;
 
-.message {
+  /* 글자 크기 */
+  font-size: 12px;
+
   /* 위 여백 */
-  margin-top: 15px;
+  margin-top: 4px;
+}
 
-  /* 강조 */
-  font-weight: bold;
+/* 비활성 버튼 */
+button:disabled {
+  /* 투명도 */
+  opacity: 0.5;
 
-  /* 메시지 색 */
-  color: #e74c3c;
+  /* 클릭 불가 커서 */
+  cursor: not-allowed;
 }
 </style>
