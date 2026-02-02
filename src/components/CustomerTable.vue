@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // 타입을 import하는 이유: props 타입을 안전하게 고정하기 위해
-import type { Customer } from '../types/customer'
+import type { Customer } from '@/types/customer'
 
 // defineProps를 쓰는 이유: 부모에서 내려준 고객 목록을 받기 위해
 const props = defineProps<{

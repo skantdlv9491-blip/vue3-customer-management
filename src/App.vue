@@ -3,8 +3,23 @@
 // - 코드에서 페이지 이동(router.push)을 하기 위해 사용
 import { useRouter } from 'vue-router'
 
+/* store import */
+/* import를 쓰는 이유: 전역 수정 상태(editingId)를 초기화(clearEdit)하기 위함 */
+import { useCustomerStore } from '@/stores/customerStore'
+
 // 라우터 인스턴스 생성
 const router = useRouter()
+
+/* store 인스턴스 생성 */
+const customerStore = useCustomerStore()
+
+/* 등록 페이지 이동(항상 신규 등록 모드) */
+const goRegisterNew = () => {
+  /* 이전에 눌렀던 수정 상태가 남아있을 수 있으므로 초기화 */
+  customerStore.clearEdit()
+
+  router.push('/register')
+}
 </script>
 
 <template>
@@ -37,7 +52,7 @@ const router = useRouter()
       <section class="card">
         <h2>📋 고객 정보 등록</h2>
         <!-- 클릭 시 고객 등록 페이지로 이동 -->
-        <button @click="router.push('/register')">등록하러 가기</button>
+        <button @click="goRegisterNew">등록하러 가기</button>
       </section>
 
       <!-- 파일 업로드 메뉴 카드 -->

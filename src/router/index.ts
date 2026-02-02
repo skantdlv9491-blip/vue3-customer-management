@@ -5,9 +5,9 @@ import { createRouter, createWebHistory } from 'vue-router'
 
 // 페이지(views) 단위 컴포넌트 import
 // - 이 컴포넌트들이 URL에 매핑되어 실제 화면으로 렌더링됨
-import CustomerList from '../views/CustomerList.vue'
-import CustomerForm from '../views/CustomerForm.vue'
-import FileUpload from '../views/FileUpload.vue'
+import CustomerList from '@/views/CustomerList.vue'
+import CustomerForm from '@/views/CustomerForm.vue'
+import FileUpload from '@/views/FileUpload.vue'
 
 // 라우팅 테이블
 // - path: URL 경로

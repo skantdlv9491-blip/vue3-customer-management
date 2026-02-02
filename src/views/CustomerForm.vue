@@ -1,35 +1,60 @@
 <script setup lang="ts">
-// ref를 import하는 이유: 입력값을 반응형으로 관리하기 위해
+/* ref/watch/computed를 import하는 이유: 입력값/검증/감시를 반응형으로 처리하기 위해 */
 import { ref, watch, computed } from 'vue'
 
-// useRouter를 import하는 이유: 등록/수정 후 목록으로 이동하기 위해
-import { useRouter } from 'vue-router'
+/* useRouter/useRoute를 import하는 이유:
+  - 등록/수정 후 목록으로 이동하기 위해(useRouter)
+  - /register 진입 시 query(mode)를 읽어서 신규/수정 모드를 강제하기 위해(useRoute)
+*/
+import { useRouter, useRoute } from 'vue-router'
 
-// store를 import하는 이유: 등록/수정/수정대상 정보를 Pinia에서 관리하기 위해
-import { useCustomerStore } from '../stores/customerStore'
+/* store를 import하는 이유: 등록/수정/수정대상 정보를 Pinia에서 관리하기 위해 */
+import { useCustomerStore } from '@/stores/customerStore'
 
-// 타입을 import하는 이유: 저장할 입력 데이터 구조를 고정하기 위해
-import type { CustomerInput } from '../types/customer'
+/* 타입을 import하는 이유: 저장할 입력 데이터 구조를 고정하기 위해 */
+import type { CustomerInput } from '@/types/customer'
 
-// 라우터 인스턴스
+/* 라우터 인스턴스 */
 const router = useRouter()
 
-// store 인스턴스
+/* 라우트 인스턴스 */
+/* route를 쓰는 이유: URL 쿼리(mode=new)를 읽어서 "신규 등록 모드"를 강제하기 위함 */
+const route = useRoute()
+
+/* store 인스턴스 */
 const customerStore = useCustomerStore()
 
-// 입력값 상태
+/* ===============================
+  ✅ 추가: 신규 등록 모드 강제(쿼리 기반)
+  ===============================
+  - /register?mode=new 로 들어오면 editing 상태를 무조건 초기화
+  - 다른 페이지 갔다가 "등록하러 가기" 눌렀을 때 수정 상태가 남아있는 문제 방지
+*/
+watch(
+  () => route.query.mode,
+  (mode) => {
+    /* mode가 new면 수정 상태 제거 */
+    if (mode === 'new') {
+      customerStore.clearEdit()
+    }
+  },
+  /* 진입 즉시 1번 실행해서 새로고침에도 동일하게 적용 */
+  { immediate: true },
+)
+
+/* 입력값 상태 */
 const name = ref('')
 const email = ref('')
 const phone = ref('')
 
-// 에러 메시지 상태
+/* 에러 메시지 상태 */
 const errors = ref<{
   name?: string
   email?: string
   phone?: string
 }>({})
 
-// 수정 대상(customerStore.editingCustomer)이 바뀔 때 폼을 채우기 위해 watch 사용
+/* 수정 대상(customerStore.editingCustomer)이 바뀔 때 폼을 채우기 위해 watch 사용 */
 watch(
   () => customerStore.editingCustomer,
   (c) => {
@@ -47,14 +72,14 @@ watch(
   { immediate: true },
 )
 
-// 이메일 형식 체크용 정규식 (실무 최소)
+/* 이메일 형식 체크용 정규식 (실무 최소) */
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-// 전화번호 형식 검증 정규식
-// - 010-1234-5678 형태만 허용
+/* 전화번호 형식 검증 정규식 */
+/* - 01012345678 형태만 허용 */
 const phoneRegex = /^010\d{4}\d{4}$/
 
-// 유효성 검사
+/* 유효성 검사 */
 const validate = (): boolean => {
   const e: typeof errors.value = {}
 
@@ -72,7 +97,7 @@ const validate = (): boolean => {
     e.phone = '전화번호는 필수입니다.'
   }
 
-  // 정규식 불일치면 중단
+  /* 정규식 불일치면 중단 */
   if (!phoneRegex.test(phone.value)) {
     e.phone = '전화번호 형식은 01012345678 입니다.'
   }
@@ -81,12 +106,12 @@ const validate = (): boolean => {
   return Object.keys(e).length === 0
 }
 
-// submit 가능 여부(버튼 비활성화용)
+/* submit 가능 여부(버튼 비활성화용) */
 const canSubmit = computed(() => {
   return name.value && email.value && phone.value
 })
 
-// 제출
+/* 제출 */
 const onSubmit = () => {
   if (!validate()) return
 
@@ -102,10 +127,13 @@ const onSubmit = () => {
     customerStore.addCustomer(payload)
   }
 
+  /* 완료 후엔 수정 상태가 남지 않게 초기화 */
+  customerStore.clearEdit()
+
   router.push('/')
 }
 
-// 취소
+/* 취소 */
 const onCancel = () => {
   customerStore.clearEdit()
   router.push('/')

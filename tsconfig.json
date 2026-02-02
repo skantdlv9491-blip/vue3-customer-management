@@ -1,11 +1,7 @@
 {
+  // files를 빈 배열로 두는 이유: 루트 tsconfig는 직접 컴파일 대상이 아니라 설정 묶음 역할만 하기 위함
   "files": [],
-  "references": [
-    {
-      "path": "./tsconfig.node.json"
-    },
-    {
-      "path": "./tsconfig.app.json"
-    }
-  ]
+
+  // references를 쓰는 이유: 앱/노드 설정을 분리하고 빌드/타입체크를 안정화하기 위함
+  "references": [{ "path": "./tsconfig.app.json" }, { "path": "./tsconfig.node.json" }]
 }
